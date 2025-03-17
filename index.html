@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #222;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser-arcade-physics.min.js"></script>
+</head>
+<body>
+
+    <script>
+    class Example extends Phaser.Scene
+    {
+        constructor() {
+            super();
+            this.joystick = null;
+            this.joystickBase = null;
+            this.joystickThumb = null;
+            this.isDragging = false;
+            this.logo = null;
+            this.enemy = null;
+            this.joystickRadius = 50;
+            this.maxSpeed = 300;
+            this.changeDirectionTimer = null;
+            this.trapButton = null;
+            this.trapCount = 5;
+            this.trapCountText = null;
+            this.trapGroup = null;
+            this.trapPlacementDistance = 60;
+        }
+
+        preload() {
+            this.load.setBaseURL('https://labs.phaser.io');
+            this.load.image('logo', 'assets/sprites/phaser3-logo.png');
+        }
+
+        create() {
+            // Set background color through canvas
+            this.cameras.main.setBackgroundColor('#222222');
+            
+            // Logo (rectangle we'll control)
+            this.logo = this.physics.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'logo');
+            this.logo.setCollideWorldBounds(true);
+            this.logo.setBounce(0.2, 0.2);
+            
+            // Remove drag to ensure immediate stop when joystick is released
+            this.logo.setDrag(0, 0);
+            this.logo.setDamping(false);
+
+            // Create trap group
+            this.trapGroup = this.physics.add.group();
+
+            // Create enemy
+            this.createEnemy();
+
+            // Create joystick
+            this.createJoystick();
+            
+            // Create trap button
+            this.createTrapButton();
+
+            // Set up input events
+            this.input.on('pointerdown', this.handlePointerDown, this);
+            this.input.on('pointermove', this.moveJoystick, this);
+            this.input.on('pointerup', this.stopJoystick, this);
+            this.input.on('pointerout', this.stopJoystick, this);
+            
+            // Add collision between traps and enemy
+            this.physics.add.overlap(this.trapGroup, this.enemy, this.enemyTrapped, null, this);
+        }
+
+        createEnemy() {
+            // Create a simple red rectangle as the enemy
+            this.enemy = this.add.rectangle(
+                Phaser.Math.Between(100, this.cameras.main.width - 100),
+                Phaser.Math.Between(100, this.cameras.main.height - 100),
+                40, 40, 0xff0000
+            );
+            
+            // Enable physics on the enemy
+            this.physics.add.existing(this.enemy);
+            
+            // Make sure the enemy stays within the game bounds
+            this.enemy.body.setCollideWorldBounds(true);
+            
+            // Make the enemy move randomly
+            this.setRandomEnemyDirection();
+            
+            // Change direction every 2-5 seconds
+            this.changeDirectionTimer = this.time.addEvent({
+                delay: Phaser.Math.Between(2000, 5000),
+                callback: this.setRandomEnemyDirection,
+                callbackScope: this,
+                loop: true
+            });
+        }
+        
+        setRandomEnemyDirection() {
+            // Check if enemy exists before setting direction
+            if (!this.enemy || !this.enemy.body) return;
+            
+            // Generate a random angle
+            const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+            
+            // Set velocity based on this angle (slower than the player)
+            const speed = Phaser.Math.Between(50, 100);
+            this.enemy.body.setVelocity(
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed
+            );
+            
+            // Randomly set a new direction change timer
+            if (this.changeDirectionTimer) {
+                this.changeDirectionTimer.delay = Phaser.Math.Between(2000, 5000);
+            }
+        }
+
+        createJoystick() {
+            const x = 120;
+            const y = this.cameras.main.height - 120;
+            
+            // Create joystick container
+            this.joystick = this.add.container(x, y);
+            
+            // Create base circle
+            this.joystickBase = this.add.circle(0, 0, this.joystickRadius, 0x000000, 0.5);
+            
+            // Create joystick thumb
+            this.joystickThumb = this.add.circle(0, 0, this.joystickRadius / 2, 0xffffff, 0.7);
+            
+            // Add to container
+            this.joystick.add(this.joystickBase);
+            this.joystick.add(this.joystickThumb);
+        }
+        
+        createTrapButton() {
+            // Position at the same height as joystick, but on the right side
+            const x = this.cameras.main.width - 120;
+            const y = this.cameras.main.height - 120;  // Same y position as joystick
+            
+            // Create trap button container
+            this.trapButton = this.add.container(x, y);
+            
+            // Create base circle
+            const trapBase = this.add.circle(0, 0, this.joystickRadius, 0x000000, 0.5);
+            
+            // Create triangle in the center of the button (Fix #2)
+            const triangleSize = 20;
+            const triangle = this.add.triangle(
+                0, 0,  // Centered at 0,0 relative to container
+                -triangleSize, triangleSize,
+                triangleSize, triangleSize,
+                0, -triangleSize,
+                0xffff00
+            );
+            
+            // Add counter as a simple number (Fix #3 & #4)
+            this.trapCountText = this.add.text(
+                -this.joystickRadius + 10,  // Top left corner of the button
+                -this.joystickRadius + 5,   // Top left corner of the button
+                this.trapCount.toString(), 
+                { 
+                    fontSize: '24px', 
+                    fill: '#ffffff',
+                    stroke: '#000000',
+                    strokeThickness: 3
+                }
+            );
+            
+            // Add all elements to container
+            this.trapButton.add(trapBase);
+            this.trapButton.add(triangle);
+            this.trapButton.add(this.trapCountText);
+            
+            // Make the button interactive
+            trapBase.setInteractive();
+        }
+
+        handlePointerDown(pointer) {
+            // Check if the trap button was clicked
+            const distanceToTrapButton = Phaser.Math.Distance.Between(
+                pointer.x, pointer.y,
+                this.trapButton.x, this.trapButton.y
+            );
+            
+            if (distanceToTrapButton <= this.joystickRadius) {
+                this.placeTrap();
+                return;
+            }
+            
+            // Otherwise, check if the joystick was clicked
+            const distanceToJoystick = Phaser.Math.Distance.Between(
+                pointer.x, pointer.y,
+                this.joystick.x, this.joystick.y
+            );
+            
+            if (distanceToJoystick <= this.joystickRadius * 1.5) {
+                this.isDragging = true;
+                this.moveJoystick(pointer);
+            }
+        }
+
+        moveJoystick(pointer) {
+            if (!this.isDragging) return;
+            
+            // Calculate distance between pointer and joystick center
+            const dx = pointer.x - this.joystick.x;
+            const dy = pointer.y - this.joystick.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Normalize direction
+            let angle = Math.atan2(dy, dx);
+            
+            // Limit joystick movement to the base radius
+            let thumbX, thumbY;
+            if (distance > this.joystickRadius) {
+                thumbX = Math.cos(angle) * this.joystickRadius;
+                thumbY = Math.sin(angle) * this.joystickRadius;
+            } else {
+                thumbX = dx;
+                thumbY = dy;
+            }
+            
+            // Move thumb position
+            this.joystickThumb.x = thumbX;
+            this.joystickThumb.y = thumbY;
+            
+            // Calculate logo velocity based on joystick position
+            const percentDistanceFromCenter = Math.min(distance / this.joystickRadius, 1);
+            this.logo.setVelocity(
+                Math.cos(angle) * this.maxSpeed * percentDistanceFromCenter,
+                Math.sin(angle) * this.maxSpeed * percentDistanceFromCenter
+            );
+            
+            // Store the current angle for trap placement
+            this.currentAngle = angle;
+        }
+
+        stopJoystick() {
+            if (this.isDragging) {
+                this.isDragging = false;
+                this.joystickThumb.x = 0;
+                this.joystickThumb.y = 0;
+                
+                // Immediately stop the logo when joystick is released
+                this.logo.setVelocity(0, 0);
+            }
+        }
+        
+        placeTrap() {
+            // Only place a trap if we have traps left
+            if (this.trapCount <= 0) return;
+            
+            // Calculate the trap placement position
+            // If the player is not moving, place it in front of them
+            let angle = this.currentAngle;
+            
+            if (angle === undefined) {
+                angle = -Math.PI / 2; // Default to placing above the player
+            }
+            
+            const trapX = this.logo.x + Math.cos(angle) * this.trapPlacementDistance;
+            const trapY = this.logo.y + Math.sin(angle) * this.trapPlacementDistance;
+            
+            // Create the triangle trap
+            const trap = this.add.triangle(
+                trapX, trapY,
+                -15, 15,
+                15, 15,
+                0, -15,
+                0xffff00
+            );
+            
+            // Add it to the physics group
+            this.physics.add.existing(trap);
+            this.trapGroup.add(trap);
+            
+            // Decrease the trap count
+            this.trapCount--;
+            this.trapCountText.setText(this.trapCount.toString());  // Update just the number
+            
+            // Visual feedback
+            this.tweens.add({
+                targets: this.trapButton,
+                scale: 1.2,
+                duration: 100,
+                yoyo: true
+            });
+            
+            // Make the trap flash
+            this.tweens.add({
+                targets: trap,
+                fillColor: 0xffffff,
+                duration: 200,
+                yoyo: true,
+                repeat: 1
+            });
+        }
+        
+        enemyTrapped(trap, enemy) {
+            // Store enemy position before destroying it
+            const enemyX = enemy.x;
+            const enemyY = enemy.y;
+            
+            // Create a flash effect
+            const flash = this.add.circle(enemyX, enemyY, 30, 0xffffff);
+            
+            this.tweens.add({
+                targets: flash,
+                scale: 2,
+                alpha: 0,
+                duration: 300,
+                onComplete: () => {
+                    flash.destroy();
+                }
+            });
+            
+            // Remove collision timer
+            if (this.changeDirectionTimer) {
+                this.changeDirectionTimer.remove();
+                this.changeDirectionTimer = null;
+            }
+            
+            // Destroy both the trap and the enemy
+            trap.destroy();
+            enemy.destroy();
+            this.enemy = null; // Set to null to avoid reference errors
+            
+            // Create a new enemy after a short delay
+            this.time.delayedCall(1000, () => {
+                this.createEnemy();
+            });
+        }
+        
+        update() {
+            // Check for collision between player and enemy only if enemy exists
+            if (this.enemy && this.enemy.body) {
+                this.physics.world.collide(this.logo, this.enemy, this.handleCollision, null, this);
+            }
+        }
+        
+        handleCollision() {
+            // Only proceed if enemy exists
+            if (!this.enemy || !this.enemy.body) return;
+            
+            // Flash the enemy red when collision happens
+            this.tweens.add({
+                targets: this.enemy,
+                fillColor: 0xffff00,
+                duration: 100,
+                yoyo: true,
+                repeat: 3,
+                onComplete: () => {
+                    if (this.enemy) {
+                        this.enemy.fillColor = 0xff0000;
+                    }
+                }
+            });
+            
+            // Push the enemy away slightly
+            const angle = Phaser.Math.Angle.Between(
+                this.logo.x, this.logo.y,
+                this.enemy.x, this.enemy.y
+            );
+            
+            this.enemy.body.setVelocity(
+                Math.cos(angle) * 150,
+                Math.sin(angle) * 150
+            );
+            
+            // Reset the direction change timer
+            if (this.changeDirectionTimer) {
+                this.changeDirectionTimer.reset({
+                    delay: Phaser.Math.Between(2000, 5000),
+                    callback: this.setRandomEnemyDirection,
+                    callbackScope: this,
+                    loop: true
+                });
+            }
+        }
+    }
+
+    // Determine the game size based on the device
+    const getGameConfig = () => {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        return {
+            type: Phaser.AUTO,
+            width: width,
+            height: height,
+            scene: Example,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            }
+        };
+    };
+
+    // Create the game with responsive config
+    const game = new Phaser.Game(getGameConfig());
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (game) {
+            game.scale.resize(window.innerWidth, window.innerHeight);
+        }
+    });
+    </script>
+
+</body>
+</html>
