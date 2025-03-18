@@ -1,3 +1,4 @@
+modules = ["python-base-3.13"]
 [workflows]
 runButton = "Run"
 
@@ -12,3 +13,7 @@ args = "python server.py"
 
 [nix]
 channel = "stable-24_05"
+
+[[ports]]
+localPort = 8000
+externalPort = 80
