@@ -242,7 +242,7 @@
             
             // Calculate logo velocity based on joystick position
             const percentDistanceFromCenter = Math.min(distance / this.joystickRadius, 1);
-            this.logo.setVelocity(
+            this.logo.body.setVelocity(
                 Math.cos(angle) * this.maxSpeed * percentDistanceFromCenter,
                 Math.sin(angle) * this.maxSpeed * percentDistanceFromCenter
             );
@@ -258,7 +258,7 @@
                 this.joystickThumb.y = 0;
                 
                 // Immediately stop the logo when joystick is released
-                this.logo.setVelocity(0, 0);
+                this.logo.body.setVelocity(0, 0);
             }
         }
         
