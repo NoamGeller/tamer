@@ -39,18 +39,24 @@
         }
 
         preload() {
-            this.load.setBaseURL('https://labs.phaser.io');
-            this.load.image('logo', 'assets/sprites/phaser3-logo.png');
+            // No preload needed for rectangle
         }
 
         create() {
             // Set background color through canvas
             this.cameras.main.setBackgroundColor('#222222');
             
-            // Logo (rectangle we'll control)
-            this.logo = this.physics.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'logo');
-            this.logo.setCollideWorldBounds(true);
-            this.logo.setBounce(0.2, 0.2);
+            // Create green rectangle
+            this.logo = this.add.rectangle(
+                this.cameras.main.width / 2,
+                this.cameras.main.height / 2,
+                50,  // width
+                50,  // height
+                0x00ff00  // green color
+            );
+            this.physics.add.existing(this.logo);
+            this.logo.body.setCollideWorldBounds(true);
+            this.logo.body.setBounce(0.2, 0.2);
             
             // Remove drag to ensure immediate stop when joystick is released
             this.logo.setDrag(0, 0);
