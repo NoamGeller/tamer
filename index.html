@@ -58,9 +58,9 @@
             this.logo.body.setCollideWorldBounds(true);
             this.logo.body.setBounce(0.2, 0.2);
             
-            // Remove drag to ensure immediate stop when joystick is released
-            this.logo.setDrag(0, 0);
-            this.logo.setDamping(false);
+            // Set up physics properties for smooth movement
+            this.logo.body.setDamping(true);
+            this.logo.body.setDrag(0.95);
 
             // Create trap group
             this.trapGroup = this.physics.add.group();
