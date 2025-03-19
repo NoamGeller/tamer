@@ -1,5 +1,5 @@
 
-class Example extends Phaser.Scene {
+export default class Example extends Phaser.Scene {
     constructor() {
         super();
         this.joystick = null;
@@ -264,4 +264,4 @@ class Example extends Phaser.Scene {
     }
 }
 
-export { Example as default };
+
