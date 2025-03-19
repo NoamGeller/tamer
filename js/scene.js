@@ -264,4 +264,4 @@ class Example extends Phaser.Scene {
     }
 }
 
-export default Example;
+export { Example as default };
