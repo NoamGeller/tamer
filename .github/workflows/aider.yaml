@@ -17,4 +17,4 @@ jobs:
       base-branch: ${{ github.event.repository.default_branch }}
       model: deepseek/deepseek-chat
     secrets: 
-      deepseek_api_key: ${{ DEEPSEEK_API_KEY }}
+      deepseek_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
