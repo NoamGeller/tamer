@@ -1,4 +1,4 @@
-modules = ["python-base-3.13"]
+modules = ["web"]
 [workflows]
 runButton = "Run"
 
