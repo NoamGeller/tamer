@@ -1,8 +1,9 @@
+import Example from './scene.js';
 
 const getGameConfig = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    
+
     return {
         type: Phaser.AUTO,
         width: width,
