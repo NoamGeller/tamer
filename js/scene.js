@@ -30,7 +30,10 @@ export default class Example extends Phaser.Scene {
         this.createJoystick();
         this.createTrapButton();
         this.setupInputEvents();
-        this.physics.add.overlap(this.trapGroup, this.enemy, this.enemyTrapped, null, this);
+    }
+    
+    setupEnemyTrapCollision(enemy) {
+        this.physics.add.overlap(this.trapGroup, enemy, this.enemyTrapped, null, this);
     }
 
     createPlayer() {
@@ -81,7 +84,6 @@ export default class Example extends Phaser.Scene {
         if (this.changeDirectionTimer) {
             this.changeDirectionTimer.delay = Phaser.Math.Between(2000, 5000);
         }
-        this.physics.add.overlap(this.trapGroup, this.enemy, this.enemyTrapped, null, this);
     }
 
     createJoystick() {
@@ -216,14 +218,16 @@ export default class Example extends Phaser.Scene {
         });
         if (this.changeDirectionTimer) {
             this.changeDirectionTimer.remove();
-            this.changeDirectionTimer = null;
         }
         trap.destroy();
         enemy.destroy();
         this.enemy = null;
-        this.time.delayedCall(1000, () => {
-            this.createEnemy();
-        });
+        this.time.delayedCall(1000, this.setupEnemy.bind(this));
+    }
+    
+    setupEnemy() {
+        this.createEnemy();
+        this.setupEnemyTrapCollision(this.enemy);
     }
 
     update() {
