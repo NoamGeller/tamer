@@ -81,6 +81,7 @@ export default class Example extends Phaser.Scene {
         if (this.changeDirectionTimer) {
             this.changeDirectionTimer.delay = Phaser.Math.Between(2000, 5000);
         }
+        this.physics.add.overlap(this.trapGroup, this.enemy, this.enemyTrapped, null, this);
     }
 
     createJoystick() {
