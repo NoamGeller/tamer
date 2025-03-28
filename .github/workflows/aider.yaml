@@ -40,7 +40,7 @@ jobs:
       issues: read
       pull-requests: write
     with:
-      issue-number: ${{ inputs.issue_number }}
+      issue-number: ${{ inputs.issue }}
       base-branch: main
       model: groq/${{ inputs.model }}
     secrets: 
